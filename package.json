@@ -5,8 +5,8 @@
   "scripts": {
     "start": "node index.js"
   },
-  "dependencies": {
-    "puppeteer": "^21.0.0",
-    "google-spreadsheet": "^4.0.0"
-  }
+"dependencies": {
+  "puppeteer-core": "^21.11.0",
+  "google-spreadsheet": "^4.0.0"
+}
 }
