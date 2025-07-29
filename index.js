@@ -1,8 +1,17 @@
-const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer-core');
 const { GoogleSpreadsheet } = require('google-spreadsheet');
+const { execSync } = require('child_process');
 
 async function main() {
-  const browser = await puppeteer.launch({ headless: 'new' });
+  // 시스템 chromium 경로 찾기
+  const chromePath = execSync('which chromium-browser || which chromium || which google-chrome').toString().trim();
+
+  const browser = await puppeteer.launch({
+    executablePath: chromePath,
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox']
+  });
+
   const page = await browser.newPage();
   await page.goto('https://smartstore.naver.com/hangugmall', { waitUntil: 'networkidle2' });
 
