@@ -1,35 +1,50 @@
-import requests
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from bs4 import BeautifulSoup
 import datetime
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+import time
+import re
 
-# API URL
-url = "https://smartstore.naver.com/i/v2/channels/2sWDvfVZ7JcpctEbCV9yS/individual-info"
+# ---------------------------
+# 1. ChromeDriver 설정
+# ---------------------------
+options = Options()
+options.add_argument("--headless")
+options.add_argument("--no-sandbox")
+options.add_argument("--disable-dev-shm-usage")
+service = Service("/usr/local/bin/chromedriver")  # GitHub Actions 경로
+driver = webdriver.Chrome(service=service, options=options)
 
-# Headers 설정 (User-Agent만 있어도 정상 호출 가능)
-headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-    "Referer": "https://smartstore.naver.com/hangugmall"
-}
+# ---------------------------
+# 2. 스마트스토어 페이지 접근
+# ---------------------------
+url = "https://smartstore.naver.com/hangugmall"
+driver.get(url)
+time.sleep(5)  # JS 렌더링 대기
 
-response = requests.get(url, headers=headers)
+# ---------------------------
+# 3. 관심고객수 추출
+# ---------------------------
 interest_count = "데이터 없음"
+all_divs = driver.find_elements(By.CSS_SELECTOR, "div")
+for el in all_divs:
+    text = el.text.strip()
+    if "관심고객수" in text:
+        match = re.search(r'\d[\d,]*', text)
+        if match:
+            interest_count = match.group(0).replace(",", "")
+        break
 
-if response.status_code == 200:
-    data = response.json()
-    print("API 응답:", data)  # 전체 데이터 확인
-    # followerCount 값 추출
-    if "followerCount" in data:
-        interest_count = data["followerCount"]
-    else:
-        print("followerCount 키가 없음:", data.keys())
-else:
-    print("API 요청 실패:", response.status_code)
+driver.quit()
 
-# 한국 시간
-today = (datetime.datetime.utcnow() + datetime.timedelta(hours=9)).strftime("%Y-%m-%d %H:%M")
-
-# Google Sheet 기록
+# ---------------------------
+# 4. Google Sheets에 기록
+# ---------------------------
+today = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M")
 scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
 creds = ServiceAccountCredentials.from_json_keyfile_name('credentials.json', scope)
 client = gspread.authorize(creds)
