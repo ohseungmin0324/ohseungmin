@@ -1,7 +1,9 @@
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from bs4 import BeautifulSoup
-import time
 import datetime
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
@@ -16,7 +18,14 @@ options.add_argument("--disable-dev-shm-usage")
 
 driver = webdriver.Chrome(options=options)
 driver.get(url)
-time.sleep(5)  # JS 로딩 대기 (필요시 더 늘릴 수 있음)
+
+try:
+    # 관심고객수 요소가 나타날 때까지 최대 10초 대기
+    WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located((By.CSS_SELECTOR, "div._3kDC7jvaa-"))
+    )
+except Exception as e:
+    print("관심고객수 요소를 찾지 못했습니다:", e)
 
 soup = BeautifulSoup(driver.page_source, "html.parser")
 driver.quit()
@@ -24,7 +33,7 @@ driver.quit()
 # 2. 관심고객수 추출
 interest_count = "데이터 없음"
 try:
-    element = soup.select_one("div._3kDC7jvaa-")  # 클래스명 기반으로 추출
+    element = soup.select_one("div._3kDC7jvaa-")
     if element:
         interest_count = element.get_text(strip=True).replace("관심고객수", "").strip()
 except Exception as e:
