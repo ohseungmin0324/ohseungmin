@@ -19,7 +19,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install selenium gspread oauth2client requests
+          pip install selenium gspread oauth2client requests beautifulsoup4
 
       - name: Run crawler script
         env:
