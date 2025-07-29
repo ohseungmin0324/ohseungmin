@@ -3,7 +3,7 @@ name: Smartstore Crawler
 on:
   schedule:
     - cron: "0 * * * *"   # 매 정각마다 실행
-  workflow_dispatch:
+  workflow_dispatch:      # 수동 실행 가능
 
 jobs:
   run-script:
@@ -17,20 +17,23 @@ jobs:
         with:
           python-version: "3.10"
 
-      - name: Install Chrome and ChromeDriver
+      # Chrome 설치
+      - name: Install Google Chrome
         run: |
           sudo apt-get update
           sudo apt-get install -y wget unzip curl
-          # 최신 Chrome 설치
           wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
           sudo apt install -y ./google-chrome-stable_current_amd64.deb
-          # Chrome 버전에 맞는 ChromeDriver 자동 다운로드
+
+      # ChromeDriver 설치
+      - name: Install ChromeDriver
+        run: |
           CHROME_VERSION=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+')
-          DRIVER_VERSION=$(curl -s "https://googlechromelabs.github.io/chrome-for-testing/LATEST_RELEASE_${CHROME_VERSION%%.*}")
-          wget https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/$DRIVER_VERSION/linux64/chromedriver-linux64.zip
-          unzip chromedriver-linux64.zip
-          sudo mv chromedriver-linux64/chromedriver /usr/local/bin/
-          sudo chmod +x /usr/local/bin/chromedriver
+          DRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE")
+          wget -N https://chromedriver.storage.googleapis.com/$DRIVER_VERSION/chromedriver_linux64.zip -P ~/
+          unzip ~/chromedriver_linux64.zip -d ~/
+          sudo mv -f ~/chromedriver /usr/local/bin/chromedriver
+          chromedriver --version
 
       - name: Install dependencies
         run: |
