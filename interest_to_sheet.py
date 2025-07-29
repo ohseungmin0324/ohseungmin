@@ -1,39 +1,49 @@
 from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 import datetime
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+import time
+import re
 
-# 1. Selenium으로 페이지 로드
-url = "https://smartstore.naver.com/hangugmall"
-
+# ---------------------------
+# 1. Selenium (ChromeDriver) 설정
+# ---------------------------
+chrome_driver_path = r"C:\chromedriver\chromedriver.exe"
 options = Options()
-options.add_argument("--headless")
-options.add_argument("--no-sandbox")
-options.add_argument("--disable-dev-shm-usage")
+# options.add_argument("--headless")  # 테스트 중에는 창을 띄워 확인
+service = Service(chrome_driver_path)
+driver = webdriver.Chrome(service=service, options=options)
 
-driver = webdriver.Chrome(options=options)
+# ---------------------------
+# 2. 스마트스토어 페이지 접근
+# ---------------------------
+url = "https://smartstore.naver.com/hangugmall"
 driver.get(url)
+time.sleep(5)  # 페이지 로딩 대기
 
+# ---------------------------
+# 3. 관심고객수 추출 로직
+# ---------------------------
 interest_count = "데이터 없음"
-try:
-    # 관심고객수 텍스트가 포함된 div가 로드될 때까지 대기
-    element = WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.CLASS_NAME, "_3kDC7jvaa-"))
-    )
-    if element:
-        # 요소의 텍스트를 직접 가져옴
-        raw_text = element.text.strip()
-        interest_count = raw_text.replace("관심고객수", "").strip()
-except Exception as e:
-    print("크롤링 실패:", e)
+all_divs = driver.find_elements(By.CSS_SELECTOR, "#header div")
+
+for el in all_divs:
+    text = el.text.strip()
+    if "관심고객수" in text:
+        # "관심고객수 64,688" 형태에서 숫자만 추출
+        match = re.search(r'\d[\d,]*', text)
+        if match:
+            interest_count = match.group(0).replace(",", "")
+        break
 
 driver.quit()
 
-# 3. Google Sheets에 기록
+# ---------------------------
+# 4. Google Sheet 저장
+# ---------------------------
 today = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
 scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
 creds = ServiceAccountCredentials.from_json_keyfile_name('credentials.json', scope)
