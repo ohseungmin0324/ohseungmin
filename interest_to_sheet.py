@@ -7,15 +7,18 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import time
 import re
+import os
 
 # ---------------------------
 # 1. Selenium (ChromeDriver) 설정
 # ---------------------------
-chrome_driver_path = r"C:\chromedriver\chromedriver.exe"
 options = Options()
-# options.add_argument("--headless")  # 테스트 중에는 창을 띄워 확인
-service = Service(chrome_driver_path)
-driver = webdriver.Chrome(service=service, options=options)
+options.add_argument("--headless")  # 서버에서는 headless 모드 필수
+options.add_argument("--no-sandbox")
+options.add_argument("--disable-dev-shm-usage")
+
+# GitHub Actions 환경에서 chromedriver를 PATH로 실행
+driver = webdriver.Chrome(options=options)
 
 # ---------------------------
 # 2. 스마트스토어 페이지 접근
@@ -33,7 +36,6 @@ all_divs = driver.find_elements(By.CSS_SELECTOR, "#header div")
 for el in all_divs:
     text = el.text.strip()
     if "관심고객수" in text:
-        # "관심고객수 64,688" 형태에서 숫자만 추출
         match = re.search(r'\d[\d,]*', text)
         if match:
             interest_count = match.group(0).replace(",", "")
