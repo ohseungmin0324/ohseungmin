@@ -3,40 +3,31 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-import datetime
+from datetime import datetime, timedelta
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-import time
 import re
+import time
 
-# ---------------------------
-# 1. Selenium (ChromeDriver) 설정
-# ---------------------------
 options = Options()
-options.add_argument("--headless")  # headless 모드
+options.add_argument("--headless")
 options.add_argument("--no-sandbox")
 options.add_argument("--disable-dev-shm-usage")
+options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
 
 driver = webdriver.Chrome(options=options)
 url = "https://smartstore.naver.com/hangugmall"
 driver.get(url)
-
-# 페이지 로딩 완료 대기
 WebDriverWait(driver, 15).until(
     lambda d: d.execute_script("return document.readyState") == "complete"
 )
 
-# ---------------------------
-# 2. 관심고객수 추출 로직
-# ---------------------------
+# 페이지 저장 (디버깅용)
+with open("debug.html", "w", encoding="utf-8") as f:
+    f.write(driver.page_source)
+
 interest_count = "데이터 없음"
-
 try:
-    # 관심고객수 div가 로딩될 때까지 대기
-    WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.CSS_SELECTOR, "#header div"))
-    )
-
     all_divs = driver.find_elements(By.CSS_SELECTOR, "#header div")
     for el in all_divs:
         text = el.text.strip()
@@ -45,23 +36,14 @@ try:
             if match:
                 interest_count = match.group(0).replace(",", "")
             break
-
-    # Fallback: 모든 페이지 소스에서 "관심고객수" 검색
-    if interest_count == "데이터 없음":
-        page_text = driver.page_source
-        match = re.search(r'관심고객수[^0-9]*([\d,]+)', page_text)
-        if match:
-            interest_count = match.group(1).replace(",", "")
-
 except Exception as e:
     print("크롤링 실패:", e)
 
 driver.quit()
 
-# ---------------------------
-# 3. Google Sheet 저장
-# ---------------------------
-today = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+# 한국 시간
+today = (datetime.utcnow() + timedelta(hours=9)).strftime("%Y-%m-%d %H:%M")
+
 scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
 creds = ServiceAccountCredentials.from_json_keyfile_name('credentials.json', scope)
 client = gspread.authorize(creds)
