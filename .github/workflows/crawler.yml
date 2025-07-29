@@ -2,7 +2,7 @@ name: Smartstore Crawler
 
 on:
   schedule:
-    - cron: "0 * * * *"   # 매 정각마다 실행 (1시간마다)
+    - cron: "0 * * * *"   # 매 정각마다 실행
   workflow_dispatch:
 
 jobs:
@@ -16,6 +16,18 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: "3.10"
+
+      - name: Install Chrome and ChromeDriver
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget unzip curl
+          wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+          sudo apt install -y ./google-chrome-stable_current_amd64.deb
+          CHROME_DRIVER_VERSION=$(curl -sS chromedriver.storage.googleapis.com/LATEST_RELEASE)
+          wget https://chromedriver.storage.googleapis.com/$CHROME_DRIVER_VERSION/chromedriver_linux64.zip
+          unzip chromedriver_linux64.zip
+          sudo mv chromedriver /usr/local/bin/
+          sudo chmod +x /usr/local/bin/chromedriver
 
       - name: Install dependencies
         run: |
